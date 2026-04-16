@@ -190,12 +190,23 @@
   .main {
     display: grid;
     grid-template-columns: 1.25fr 1fr;
-    gap: 56px;
+    grid-template-areas:
+      "legs   result"
+      "save   save";
+    column-gap: 56px;
+    row-gap: 48px;
     padding: 48px 0 0;
   }
+  .main > .legs { grid-area: legs; }
+  .main > .result { grid-area: result; }
+  .main > .save-block { grid-area: save; }
   @media (max-width: 900px) {
-    .main { grid-template-columns: 1fr; gap: 40px; }
-    .result { position: static; }
+    .main {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+    /* HTML order: legs → save → result */
   }
 
   /* ─── Legs ───────────────────────────────────────── */
@@ -321,6 +332,13 @@
     display: flex;
     flex-direction: column;
     gap: 32px;
+  }
+  @media (max-width: 900px) {
+    .result {
+      position: static;
+      align-self: stretch;
+      width: 100%;
+    }
   }
 
   .result-label {
@@ -496,8 +514,8 @@
   }
 
   /* ─── Save CTA (primary) ──────────────────────────── */
+  .save-block { width: 100%; }
   .save-cta {
-    margin-top: 56px;
     padding: 28px 32px;
     border: 1px solid var(--bg-inv);
     background: var(--bg-inv);
@@ -535,7 +553,6 @@
   .save-cta.hidden { display: none; }
 
   .save-form {
-    margin-top: 56px;
     display: none;
     border: 1px solid var(--bg-inv);
     background: transparent;
@@ -785,6 +802,22 @@
 
     </section>
 
+    <!-- Save this goal (placed between legs and result — mobile shows it inline; desktop reflows via grid-areas) -->
+    <div class="save-block">
+      <button type="button" class="save-cta" id="save-cta">
+        <span class="cta-label">
+          <span>Save this goal</span>
+          <span class="cta-hint">keep your projection</span>
+        </span>
+        <span class="arrow">→</span>
+      </button>
+      <div class="save-form" id="save-form">
+        <input type="text" id="save-name" placeholder="Name this goal…" maxlength="40">
+        <button type="button" id="save-commit">Save</button>
+        <button type="button" class="cancel" id="save-cancel">Cancel</button>
+      </div>
+    </div>
+
     <!-- Result -->
     <aside class="result fade d4">
       <div class="result-label">
@@ -827,20 +860,6 @@
     </aside>
 
   </main>
-
-  <!-- Save this goal (end-of-flow CTA) -->
-  <button type="button" class="save-cta" id="save-cta">
-    <span class="cta-label">
-      <span>Save this goal</span>
-      <span class="cta-hint">keep your projection</span>
-    </span>
-    <span class="arrow">→</span>
-  </button>
-  <div class="save-form" id="save-form">
-    <input type="text" id="save-name" placeholder="Name this goal…" maxlength="40">
-    <button type="button" id="save-commit">Save</button>
-    <button type="button" class="cancel" id="save-cancel">Cancel</button>
-  </div>
 
   <footer class="foot">
     <span>Triathlon Time Goal</span>
