@@ -494,6 +494,122 @@
     text-align: right;
   }
 
+  /* ─── Formats row ─────────────────────────────────── */
+  .formats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 32px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+  }
+  .formats .formats-label {
+    flex: 0 0 100%;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mute);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .format-btn {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--line);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-start;
+    text-align: left;
+  }
+  .format-btn .format-dist {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--mute);
+    font-weight: 400;
+  }
+  .format-btn:hover { border-color: var(--ink); }
+  .format-btn.active {
+    background: var(--bg-inv);
+    color: var(--bg);
+    border-color: var(--bg-inv);
+  }
+  .format-btn.active .format-dist { color: var(--mute-2); }
+
+  /* ─── Save CTA ────────────────────────────────────── */
+  .save-cta {
+    margin-top: 48px;
+    padding: 22px 24px;
+    border: 1px solid var(--line);
+    background: transparent;
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.18s ease;
+    letter-spacing: -0.01em;
+  }
+  .save-cta:hover { border-color: var(--ink); }
+  .save-cta .arrow {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--mute);
+    transition: color 0.18s;
+  }
+  .save-cta:hover .arrow { color: var(--ink); }
+  .save-cta.hidden { display: none; }
+
+  .save-form {
+    margin-top: 48px;
+    display: none;
+    border: 1px solid var(--ink);
+    background: transparent;
+  }
+  .save-form.open { display: flex; align-items: stretch; }
+  .save-form input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 18px 24px;
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 500;
+    background: transparent;
+    color: var(--ink);
+    min-width: 0;
+  }
+  .save-form input::placeholder { color: var(--mute-2); }
+  .save-form button {
+    border: none;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 0 24px;
+    cursor: pointer;
+    letter-spacing: 0;
+  }
+  .save-form button.cancel {
+    background: transparent;
+    color: var(--mute);
+    border-left: 1px solid var(--line);
+  }
+  .save-form button.cancel:hover { color: var(--ink); }
+
   /* Footer */
   .foot {
     margin-top: 60px;
@@ -569,6 +685,11 @@
   <main class="main">
 
     <section class="legs fade d3">
+
+      <!-- Format selector -->
+      <div class="formats" id="formats">
+        <!-- populated by JS -->
+      </div>
 
       <!-- SWIM -->
       <div class="leg">
@@ -744,6 +865,17 @@
     </aside>
 
   </main>
+
+  <!-- Save this goal (end-of-flow CTA) -->
+  <button type="button" class="save-cta" id="save-cta">
+    <span>Save this goal</span>
+    <span class="arrow">→</span>
+  </button>
+  <div class="save-form" id="save-form">
+    <input type="text" id="save-name" placeholder="Name this goal…" maxlength="40">
+    <button type="button" id="save-commit">Save</button>
+    <button type="button" class="cancel" id="save-cancel">Cancel</button>
+  </div>
 
   <footer class="foot">
     <span>Triathlon Time Goal</span>
@@ -923,6 +1055,7 @@
         $('race-tag').textContent = p.name;
         compute();
         renderTabs();
+        renderFormats();
       });
     });
 
@@ -954,25 +1087,8 @@
     const doSave = () => {
       const name = $('add-name').value.trim();
       if (!name) { $('add-name').focus(); return; }
-      const v = readInputs();
-      const id = 'c_' + Date.now().toString(36);
-      const entry = {
-        id,
-        name,
-        subtitle: 'saved',
-        swim: { min: v.swim.min, sec: v.swim.sec, dist: v.swim.dist },
-        t1: v.t1,
-        bike: { speed: v.bike.speed, dist: v.bike.dist },
-        t2: v.t2,
-        run: { min: v.run.min, sec: v.run.sec, dist: v.run.dist }
-      };
-      const list = loadCustom();
-      list.push(entry);
-      saveCustom(list);
-      activeId = id;
+      saveAsCourse(name);
       closeAdd();
-      renderTabs();
-      $('race-tag').textContent = name;
     };
 
     $('add-save').addEventListener('click', doSave);
@@ -987,6 +1103,101 @@
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
+
+  // ─── Shared save-current-as-course ───────────────────
+  function saveAsCourse(name) {
+    name = (name || '').trim();
+    if (!name) return null;
+    const v = readInputs();
+    const id = 'c_' + Date.now().toString(36);
+    const entry = {
+      id, name, subtitle: 'saved',
+      swim: { min: v.swim.min, sec: v.swim.sec, dist: v.swim.dist },
+      t1: v.t1,
+      bike: { speed: v.bike.speed, dist: v.bike.dist },
+      t2: v.t2,
+      run: { min: v.run.min, sec: v.run.sec, dist: v.run.dist }
+    };
+    const list = loadCustom();
+    list.push(entry);
+    saveCustom(list);
+    activeId = id;
+    $('race-tag').textContent = name;
+    renderTabs();
+    return entry;
+  }
+
+  // ─── Triathlon formats (distances only) ──────────────
+  const formats = [
+    { id:'xxs',     name:'XXS',     sub:'Super Sprint', swim:0.4, bike:10,  run:2.5 },
+    { id:'s',       name:'S',       sub:'Sprint',       swim:0.75, bike:20, run:5 },
+    { id:'m',       name:'M',       sub:'Olympic',      swim:1.5,  bike:40, run:10 },
+    { id:'half',    name:'Half',    sub:'Ironman 70.3', swim:1.9,  bike:90, run:21.1 },
+    { id:'ironman', name:'Ironman', sub:'Full 140.6',   swim:3.8,  bike:180,run:42.2 }
+  ];
+
+  function formatMatches(f) {
+    const v = readInputs();
+    const eq = (a,b) => Math.abs(a-b) < 1e-6;
+    return eq(f.swim, v.swim.dist) && eq(f.bike, v.bike.dist) && eq(f.run, v.run.dist);
+  }
+
+  function renderFormats() {
+    const el = $('formats');
+    el.innerHTML = `<div class="formats-label">Format · prefill distances</div>` +
+      formats.map(f => {
+        const active = formatMatches(f);
+        return `
+          <button type="button" class="format-btn ${active ? 'active' : ''}" data-fid="${f.id}">
+            <span>${f.name}</span>
+            <span class="format-dist">${f.swim} / ${f.bike} / ${f.run} km</span>
+          </button>
+        `;
+      }).join('');
+    el.querySelectorAll('.format-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const f = formats.find(x => x.id === btn.dataset.fid);
+        if (!f) return;
+        $('swim-dist').value = f.swim;
+        $('bike-dist').value = f.bike;
+        $('run-dist').value  = f.run;
+        // Re-sync everything
+        compute();
+        // Check if any saved tab matches now
+        const all = [...builtins, ...loadCustom()];
+        const match = all.find(p => presetMatchesInputs(p));
+        if (match) { activeId = match.id; $('race-tag').textContent = match.name; }
+        else { activeId = null; $('race-tag').textContent = ''; }
+        renderFormats();
+        renderTabs();
+      });
+    });
+  }
+
+  // ─── Save CTA (end-of-flow) ──────────────────────────
+  const openSaveForm = () => {
+    $('save-cta').classList.add('hidden');
+    $('save-form').classList.add('open');
+    setTimeout(() => $('save-name').focus(), 30);
+  };
+  const closeSaveForm = () => {
+    $('save-cta').classList.remove('hidden');
+    $('save-form').classList.remove('open');
+    $('save-name').value = '';
+  };
+  const commitSave = () => {
+    const name = $('save-name').value.trim();
+    if (!name) { $('save-name').focus(); return; }
+    saveAsCourse(name);
+    closeSaveForm();
+  };
+  $('save-cta').addEventListener('click', openSaveForm);
+  $('save-cancel').addEventListener('click', closeSaveForm);
+  $('save-commit').addEventListener('click', commitSave);
+  $('save-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') commitSave();
+    if (e.key === 'Escape') closeSaveForm();
+  });
 
   // ─── Reset button ────────────────────────────────────
   function updateResetVisibility() {
@@ -1017,6 +1228,7 @@
         $('race-tag').textContent = '';
       }
       renderTabs();
+      renderFormats();
     }));
 
   // ─── Init ────────────────────────────────────────────
@@ -1024,6 +1236,7 @@
   $('date-tag').textContent = now.toISOString().slice(0, 10);
 
   renderTabs();
+  renderFormats();
   compute();
 </script>
 
