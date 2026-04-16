@@ -1,0 +1,992 @@
+<!-- Triathlon Time Goal Calculator — Minimal edition -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #FAFAF7;          /* paper */
+    --bg-inv: #0E0E0C;      /* ink */
+    --ink: #111111;
+    --mute: #8A8A85;
+    --mute-2: #BEBEB8;
+    --line: #E6E6E0;
+    --line-2: #F0F0EA;
+    --focus: #111111;
+
+    --font: 'Geist', -apple-system, 'Helvetica Neue', Helvetica, sans-serif;
+    --mono: 'Geist Mono', 'SF Mono', Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  /* ─── Layout ─────────────────────────────────────── */
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px 40px 48px;
+  }
+  @media (max-width: 760px) {
+    .page { padding: 20px 20px 40px; }
+  }
+
+  /* ─── Header ─────────────────────────────────────── */
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .head .h-title {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+  .head .h-title .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--ink);
+    border-radius: 50%;
+    margin-right: 10px;
+    vertical-align: middle;
+    transform: translateY(-1px);
+  }
+  .head .h-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute);
+    display: flex;
+    gap: 20px;
+  }
+  @media (max-width: 600px) { .head .h-meta span:nth-child(1) { display: none; } }
+
+  /* ─── Intro ──────────────────────────────────────── */
+  .intro {
+    padding: 80px 0 64px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 40px;
+    align-items: end;
+    border-bottom: 1px solid var(--line);
+  }
+  @media (max-width: 760px) {
+    .intro { grid-template-columns: 1fr; padding: 48px 0 32px; }
+  }
+  .intro h1 {
+    font-size: clamp(42px, 7vw, 96px);
+    font-weight: 400;
+    line-height: 0.95;
+    letter-spacing: -0.035em;
+  }
+  .intro h1 .light { color: var(--mute-2); font-weight: 300; }
+  .intro .i-caption {
+    font-size: 13px;
+    color: var(--mute);
+    max-width: 280px;
+    line-height: 1.55;
+    padding-bottom: 10px;
+  }
+  .intro .i-caption b {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ─── Tabs ───────────────────────────────────────── */
+  .tabs-wrap {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs-wrap::-webkit-scrollbar { display: none; }
+
+  .tab {
+    flex: 0 0 auto;
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-right: none;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-start;
+    min-width: 120px;
+    text-align: left;
+    position: relative;
+  }
+  .tab:last-of-type { border-right: 1px solid var(--line); }
+  .tab .tab-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--mute);
+    letter-spacing: 0;
+    text-transform: none;
+    font-weight: 400;
+  }
+  .tab:hover { background: var(--line-2); }
+  .tab.active {
+    background: var(--bg-inv);
+    color: var(--bg);
+    border-color: var(--bg-inv);
+  }
+  .tab.active .tab-sub { color: var(--mute-2); }
+  .tab.active + .tab { border-left: none; }
+
+  .tab .del {
+    position: absolute;
+    top: 50%; right: 6px;
+    transform: translateY(-50%);
+    width: 18px; height: 18px;
+    border: none;
+    background: transparent;
+    color: var(--mute);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    border-radius: 50%;
+  }
+  .tab.custom:hover .del { opacity: 1; }
+  .tab .del:hover { background: var(--line); color: var(--ink); }
+  .tab.active .del { color: var(--mute-2); }
+  .tab.active .del:hover { background: rgba(255,255,255,0.1); color: var(--bg); }
+
+  .tab-add {
+    flex: 0 0 auto;
+    padding: 10px 18px;
+    background: transparent;
+    border: 1px dashed var(--mute-2);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--mute);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-start;
+    margin-left: 12px;
+  }
+  .tab-add .tab-sub { font-family: var(--mono); font-size: 10px; }
+  .tab-add:hover { color: var(--ink); border-color: var(--ink); border-style: solid; }
+
+  /* Inline add form */
+  .add-form {
+    flex: 0 0 auto;
+    display: none;
+    align-items: stretch;
+    border: 1px solid var(--ink);
+    margin-left: 12px;
+  }
+  .add-form.open { display: flex; }
+  .add-form input {
+    border: none;
+    outline: none;
+    padding: 10px 14px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    background: transparent;
+    color: var(--ink);
+    min-width: 180px;
+  }
+  .add-form input::placeholder { color: var(--mute-2); }
+  .add-form button {
+    border: none;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 0 14px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+  .add-form button.cancel { background: transparent; color: var(--mute); border-left: 1px solid var(--line); }
+  .add-form button.cancel:hover { color: var(--ink); }
+
+  /* ─── Main grid ──────────────────────────────────── */
+  .main {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 56px;
+    padding: 48px 0 0;
+  }
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; gap: 40px; }
+  }
+
+  /* ─── Legs ───────────────────────────────────────── */
+  .leg {
+    padding: 22px 0;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    gap: 24px;
+    align-items: start;
+  }
+  .leg:last-child { border-bottom: 1px solid var(--line); }
+  .leg-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute-2);
+    padding-top: 4px;
+  }
+  .leg-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .leg-name {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+  .leg-sub {
+    font-size: 11px;
+    color: var(--mute);
+    font-family: var(--mono);
+  }
+
+  .fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .leg.transition .fields { grid-template-columns: 1fr; max-width: 50%; }
+  @media (max-width: 600px) {
+    .leg.transition .fields { max-width: 100%; }
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field label {
+    font-size: 10px;
+    color: var(--mute);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .field .input-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--line);
+    transition: border-color 0.15s;
+  }
+  .field:focus-within .input-row { border-bottom-color: var(--ink); }
+  .field input {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--ink);
+    width: 100%;
+    min-width: 0;
+    letter-spacing: -0.01em;
+  }
+  .field input::-webkit-outer-spin-button,
+  .field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .field input[type=number] { -moz-appearance: textfield; }
+  .field .unit {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute);
+    white-space: nowrap;
+  }
+  .field .sep-colon {
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--mute-2);
+  }
+
+  .leg-time {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 500;
+    text-align: right;
+    white-space: nowrap;
+    padding-top: 4px;
+  }
+  .leg-time .lt-min {
+    display: block;
+    font-size: 10px;
+    color: var(--mute);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+
+  .leg.transition .leg-name {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mute);
+  }
+
+  /* ─── Result ─────────────────────────────────────── */
+  .result {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .result-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mute);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .result-label .race-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+
+  .time-xl {
+    font-family: var(--font);
+    font-weight: 300;
+    font-size: clamp(72px, 12vw, 144px);
+    line-height: 0.85;
+    letter-spacing: -0.05em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" on, "lnum" on, "ss01";
+    color: var(--ink);
+  }
+  .time-xl .colon {
+    color: var(--mute-2);
+    font-weight: 300;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--line);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px 32px;
+  }
+  .stat .s-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mute);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .stat .s-value {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .stat .s-unit { color: var(--mute); margin-left: 3px; font-size: 12px; }
+
+  /* Breakdown */
+  .breakdown-title {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--mute);
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+  .bar-track {
+    display: flex;
+    height: 4px;
+    background: var(--line-2);
+    margin-bottom: 20px;
+  }
+  .bar-seg { transition: width 0.4s cubic-bezier(.4,0,.2,1); }
+  .bar-seg.s1 { background: #0E0E0C; }
+  .bar-seg.s2 { background: #6B6B66; }
+  .bar-seg.s3 { background: #2A2A26; }
+  .bar-seg.s4 { background: #6B6B66; }
+  .bar-seg.s5 { background: #444440; }
+
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .leg-row {
+    display: grid;
+    grid-template-columns: 14px 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+    border-top: 1px solid var(--line-2);
+    font-size: 12px;
+  }
+  .leg-row:first-child { border-top: none; }
+  .leg-row .dot {
+    width: 8px; height: 8px;
+  }
+  .leg-row .r-label { font-weight: 500; }
+  .leg-row .r-pct {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute);
+    min-width: 44px;
+    text-align: right;
+  }
+  .leg-row .r-time {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 64px;
+    text-align: right;
+  }
+
+  /* Footer */
+  .foot {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--mute);
+    letter-spacing: 0;
+  }
+
+  /* Reveal */
+  .fade { animation: fade 0.6s cubic-bezier(.22,1,.36,1) both; }
+  .fade.d1 { animation-delay: 0.05s; }
+  .fade.d2 { animation-delay: 0.10s; }
+  .fade.d3 { animation-delay: 0.15s; }
+  .fade.d4 { animation-delay: 0.22s; }
+  @keyframes fade {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<div class="page">
+
+  <!-- Header -->
+  <header class="head fade">
+    <div class="h-title"><span class="dot"></span>Triathlon Time Goal</div>
+    <div class="h-meta">
+      <span>Half · 1.9 / 90 / 21.1 km</span>
+      <span id="date-tag"></span>
+    </div>
+  </header>
+
+  <!-- Intro -->
+  <section class="intro fade d1">
+    <h1>Set your<br>race <span class="light">goals.</span></h1>
+    <div class="i-caption">
+      <b>Method</b>
+      Enter target paces per discipline. Transitions included. Model returns projected finish time and leg breakdown.
+    </div>
+  </section>
+
+  <!-- Tabs -->
+  <section class="tabs-wrap fade d2" id="tabs">
+    <!-- populated by JS -->
+  </section>
+
+  <!-- Main -->
+  <main class="main">
+
+    <section class="legs fade d3">
+
+      <!-- SWIM -->
+      <div class="leg">
+        <div class="leg-num">01</div>
+        <div class="leg-body">
+          <div class="leg-head">
+            <div class="leg-name">Swim</div>
+            <div class="leg-sub">open water</div>
+          </div>
+          <div class="fields">
+            <div class="field">
+              <label>Pace / 100m</label>
+              <div class="input-row">
+                <input type="number" id="swim-min" min="0" max="10" step="1" value="2">
+                <span class="sep-colon">:</span>
+                <input type="number" id="swim-sec" min="0" max="59" step="1" value="15">
+                <span class="unit">min</span>
+              </div>
+            </div>
+            <div class="field">
+              <label>Distance</label>
+              <div class="input-row">
+                <input type="number" id="swim-dist" min="0" max="10" step="0.001" value="1.9">
+                <span class="unit">km</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="leg-time" id="swim-time">00:42:45<span class="lt-min">42.8 min</span></div>
+      </div>
+
+      <!-- T1 -->
+      <div class="leg transition">
+        <div class="leg-num">02</div>
+        <div class="leg-body">
+          <div class="leg-head">
+            <div class="leg-name">Transition · T1</div>
+            <div class="leg-sub">swim → bike</div>
+          </div>
+          <div class="fields">
+            <div class="field">
+              <label>Duration</label>
+              <div class="input-row">
+                <input type="number" id="t1" min="0" max="30" step="0.5" value="5">
+                <span class="unit">min</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="leg-time" id="t1-time">00:05:00</div>
+      </div>
+
+      <!-- BIKE -->
+      <div class="leg">
+        <div class="leg-num">03</div>
+        <div class="leg-body">
+          <div class="leg-head">
+            <div class="leg-name">Bike</div>
+            <div class="leg-sub">cycling</div>
+          </div>
+          <div class="fields">
+            <div class="field">
+              <label>Average speed</label>
+              <div class="input-row">
+                <input type="number" id="bike-speed" min="10" max="60" step="0.1" value="37">
+                <span class="unit">km/h</span>
+              </div>
+            </div>
+            <div class="field">
+              <label>Distance</label>
+              <div class="input-row">
+                <input type="number" id="bike-dist" min="0" max="300" step="0.1" value="90">
+                <span class="unit">km</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="leg-time" id="bike-time">02:25:57<span class="lt-min">145.9 min</span></div>
+      </div>
+
+      <!-- T2 -->
+      <div class="leg transition">
+        <div class="leg-num">04</div>
+        <div class="leg-body">
+          <div class="leg-head">
+            <div class="leg-name">Transition · T2</div>
+            <div class="leg-sub">bike → run</div>
+          </div>
+          <div class="fields">
+            <div class="field">
+              <label>Duration</label>
+              <div class="input-row">
+                <input type="number" id="t2" min="0" max="30" step="0.5" value="3">
+                <span class="unit">min</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="leg-time" id="t2-time">00:03:00</div>
+      </div>
+
+      <!-- RUN -->
+      <div class="leg">
+        <div class="leg-num">05</div>
+        <div class="leg-body">
+          <div class="leg-head">
+            <div class="leg-name">Run</div>
+            <div class="leg-sub">half-marathon off the bike</div>
+          </div>
+          <div class="fields">
+            <div class="field">
+              <label>Pace / km</label>
+              <div class="input-row">
+                <input type="number" id="run-min" min="0" max="15" step="1" value="5">
+                <span class="sep-colon">:</span>
+                <input type="number" id="run-sec" min="0" max="59" step="1" value="0">
+                <span class="unit">min</span>
+              </div>
+            </div>
+            <div class="field">
+              <label>Distance</label>
+              <div class="input-row">
+                <input type="number" id="run-dist" min="0" max="50" step="0.01" value="21.1">
+                <span class="unit">km</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="leg-time" id="run-time">01:45:30<span class="lt-min">105.5 min</span></div>
+      </div>
+
+    </section>
+
+    <!-- Result -->
+    <aside class="result fade d4">
+      <div class="result-label">
+        <span>Projected finish</span>
+        <span class="race-tag" id="race-tag">Standard</span>
+      </div>
+
+      <div class="time-xl" id="time-display">
+        04<span class="colon">:</span>58<span class="colon">:</span>08
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="s-label">Total distance</div>
+          <div class="s-value" id="total-dist">113.0<span class="s-unit">km</span></div>
+        </div>
+        <div class="stat">
+          <div class="s-label">Average pace</div>
+          <div class="s-value" id="avg-pace">2:38<span class="s-unit">min/km</span></div>
+        </div>
+        <div class="stat">
+          <div class="s-label">Bike share</div>
+          <div class="s-value" id="bike-share">49<span class="s-unit">%</span></div>
+        </div>
+        <div class="stat">
+          <div class="s-label">Total minutes</div>
+          <div class="s-value" id="total-min">298<span class="s-unit">min</span></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div>
+        <div class="breakdown-title">Breakdown</div>
+        <div class="bar-track" id="bar-track"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </aside>
+
+  </main>
+
+  <footer class="foot">
+    <span>Triathlon Time Goal · Half</span>
+    <span>v1.0</span>
+  </footer>
+
+</div>
+
+<script>
+  // ─── Built-in presets ────────────────────────────────
+  const builtins = [
+    { id:'standard', name:'Standard', subtitle:'70.3 reference',
+      swim:{min:2,sec:15,dist:1.9}, t1:5, bike:{speed:37,dist:90}, t2:3, run:{min:5,sec:0,dist:21.1} },
+    { id:'nice', name:'Nice', subtitle:'climbing',
+      swim:{min:2,sec:0,dist:1.9}, t1:5, bike:{speed:30,dist:90}, t2:3, run:{min:5,sec:10,dist:21.1} },
+    { id:'cascais', name:'Cascais', subtitle:'rolling',
+      swim:{min:1,sec:55,dist:1.9}, t1:5, bike:{speed:37,dist:90}, t2:3, run:{min:4,sec:45,dist:21.1} },
+    { id:'sables', name:'Les Sables', subtitle:'flat',
+      swim:{min:1,sec:45,dist:1.9}, t1:5, bike:{speed:42,dist:90}, t2:3, run:{min:4,sec:40,dist:21.1} },
+    { id:'emilia', name:'Emilia-Romagna', subtitle:'flat',
+      swim:{min:1,sec:50,dist:1.9}, t1:5, bike:{speed:41,dist:90}, t2:3, run:{min:4,sec:45,dist:21.1} }
+  ];
+
+  const STORAGE_KEY = 'tri_custom_courses_v1';
+  const $ = (id) => document.getElementById(id);
+  const pad = (n) => String(Math.floor(n)).padStart(2, '0');
+
+  // ─── Persistence ─────────────────────────────────────
+  function loadCustom() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+  function saveCustom(list) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); }
+    catch (e) { console.warn('Save failed', e); }
+  }
+
+  // ─── Format helpers ──────────────────────────────────
+  function fmtHMS(minutes) {
+    const s = Math.round(minutes * 60);
+    return `${pad(s/3600)}:${pad((s%3600)/60)}:${pad(s%60)}`;
+  }
+  function fmtMMSS(minutes) {
+    const s = Math.round(minutes * 60);
+    return `${pad(s/60)}:${pad(s%60)}`;
+  }
+
+  // ─── Read inputs ─────────────────────────────────────
+  function readInputs() {
+    return {
+      swim: {
+        min: +$('swim-min').value||0,
+        sec: +$('swim-sec').value||0,
+        dist: +$('swim-dist').value||0
+      },
+      t1: +$('t1').value||0,
+      bike: {
+        speed: +$('bike-speed').value||1,
+        dist: +$('bike-dist').value||0
+      },
+      t2: +$('t2').value||0,
+      run: {
+        min: +$('run-min').value||0,
+        sec: +$('run-sec').value||0,
+        dist: +$('run-dist').value||0
+      }
+    };
+  }
+
+  function writeInputs(p) {
+    $('swim-min').value = p.swim.min;
+    $('swim-sec').value = p.swim.sec;
+    $('swim-dist').value = p.swim.dist;
+    $('t1').value = p.t1;
+    $('bike-speed').value = p.bike.speed;
+    $('bike-dist').value = p.bike.dist;
+    $('t2').value = p.t2;
+    $('run-min').value = p.run.min;
+    $('run-sec').value = p.run.sec;
+    $('run-dist').value = p.run.dist;
+  }
+
+  // ─── Compute ─────────────────────────────────────────
+  function compute() {
+    const v = readInputs();
+    const swimMin = (v.swim.min + v.swim.sec/60) * v.swim.dist * 10;
+    const bikeMin = (v.bike.dist / v.bike.speed) * 60;
+    const runMin  = (v.run.min + v.run.sec/60) * v.run.dist;
+    const total = swimMin + v.t1 + bikeMin + v.t2 + runMin;
+
+    $('swim-time').innerHTML = `${fmtHMS(swimMin)}<span class="lt-min">${swimMin.toFixed(1)} min</span>`;
+    $('t1-time').textContent = fmtHMS(v.t1);
+    $('bike-time').innerHTML = `${fmtHMS(bikeMin)}<span class="lt-min">${bikeMin.toFixed(1)} min</span>`;
+    $('t2-time').textContent = fmtHMS(v.t2);
+    $('run-time').innerHTML  = `${fmtHMS(runMin)}<span class="lt-min">${runMin.toFixed(1)} min</span>`;
+
+    const totalSec = Math.round(total * 60);
+    const H = Math.floor(totalSec / 3600);
+    const M = Math.floor((totalSec % 3600) / 60);
+    const S = totalSec % 60;
+    $('time-display').innerHTML =
+      `${pad(H)}<span class="colon">:</span>${pad(M)}<span class="colon">:</span>${pad(S)}`;
+
+    const totalDist = v.swim.dist + v.bike.dist + v.run.dist;
+    $('total-dist').innerHTML = `${totalDist.toFixed(1)}<span class="s-unit">km</span>`;
+    $('avg-pace').innerHTML = `${fmtMMSS(total/totalDist)}<span class="s-unit">min/km</span>`;
+    $('bike-share').innerHTML = `${(bikeMin/total*100).toFixed(0)}<span class="s-unit">%</span>`;
+    $('total-min').innerHTML = `${Math.round(total)}<span class="s-unit">min</span>`;
+
+    const segs = [
+      { cls:'s1', label:'Swim', min: swimMin },
+      { cls:'s2', label:'T1',   min: v.t1 },
+      { cls:'s3', label:'Bike', min: bikeMin },
+      { cls:'s4', label:'T2',   min: v.t2 },
+      { cls:'s5', label:'Run',  min: runMin }
+    ];
+
+    $('bar-track').innerHTML = segs.map(s =>
+      `<div class="bar-seg ${s.cls}" style="width:${(s.min/total*100).toFixed(2)}%"></div>`
+    ).join('');
+
+    $('legend').innerHTML = segs.map(s => {
+      const color = { s1:'#0E0E0C', s2:'#6B6B66', s3:'#2A2A26', s4:'#6B6B66', s5:'#444440' }[s.cls];
+      return `
+        <div class="leg-row">
+          <span class="dot" style="background:${color}"></span>
+          <span class="r-label">${s.label}</span>
+          <span class="r-pct">${(s.min/total*100).toFixed(1)}%</span>
+          <span class="r-time">${fmtHMS(s.min)}</span>
+        </div>`;
+    }).join('');
+  }
+
+  // ─── Preset comparison (for "Custom" state detection) ─
+  function presetMatchesInputs(p) {
+    const v = readInputs();
+    const eq = (a,b) => Math.abs(a-b) < 1e-6;
+    return eq(p.swim.min, v.swim.min) && eq(p.swim.sec, v.swim.sec) && eq(p.swim.dist, v.swim.dist)
+      && eq(p.t1, v.t1)
+      && eq(p.bike.speed, v.bike.speed) && eq(p.bike.dist, v.bike.dist)
+      && eq(p.t2, v.t2)
+      && eq(p.run.min, v.run.min) && eq(p.run.sec, v.run.sec) && eq(p.run.dist, v.run.dist);
+  }
+
+  // ─── Tabs rendering ──────────────────────────────────
+  let activeId = 'standard';
+
+  function renderTabs() {
+    const custom = loadCustom();
+    const all = [...builtins, ...custom];
+    const el = $('tabs');
+
+    const anyActive = all.some(p => p.id === activeId && presetMatchesInputs(p));
+
+    el.innerHTML = all.map(p => {
+      const isCustom = !builtins.find(b => b.id === p.id);
+      const isActive = p.id === activeId && presetMatchesInputs(p);
+      return `
+        <button class="tab ${isCustom ? 'custom' : ''} ${isActive ? 'active' : ''}" data-id="${p.id}">
+          <span>${escapeHtml(p.name)}</span>
+          <span class="tab-sub">${escapeHtml(p.subtitle || '')}</span>
+          ${isCustom ? `<button class="del" data-del="${p.id}" title="Remove">×</button>` : ''}
+        </button>
+      `;
+    }).join('') + `
+      <button class="tab-add" id="add-btn">
+        <span>+ Add course</span>
+        <span class="tab-sub">save current</span>
+      </button>
+      <div class="add-form" id="add-form">
+        <input type="text" id="add-name" placeholder="Course name…" maxlength="40">
+        <button type="button" id="add-save">Save</button>
+        <button type="button" class="cancel" id="add-cancel">Cancel</button>
+      </div>
+    `;
+
+    // Wire up
+    el.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        if (e.target.classList.contains('del')) return;
+        const id = btn.dataset.id;
+        const p = all.find(x => x.id === id);
+        if (!p) return;
+        activeId = id;
+        writeInputs(p);
+        $('race-tag').textContent = p.name;
+        compute();
+        renderTabs();
+      });
+    });
+
+    el.querySelectorAll('[data-del]').forEach(b => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = b.dataset.del;
+        const list = loadCustom().filter(x => x.id !== id);
+        saveCustom(list);
+        if (activeId === id) activeId = 'standard';
+        renderTabs();
+      });
+    });
+
+    $('add-btn').addEventListener('click', () => {
+      $('add-btn').style.display = 'none';
+      $('add-form').classList.add('open');
+      setTimeout(() => $('add-name').focus(), 30);
+    });
+
+    const closeAdd = () => {
+      $('add-btn').style.display = '';
+      $('add-form').classList.remove('open');
+      $('add-name').value = '';
+    };
+
+    $('add-cancel').addEventListener('click', closeAdd);
+
+    const doSave = () => {
+      const name = $('add-name').value.trim();
+      if (!name) { $('add-name').focus(); return; }
+      const v = readInputs();
+      const id = 'c_' + Date.now().toString(36);
+      const entry = {
+        id,
+        name,
+        subtitle: 'saved',
+        swim: { min: v.swim.min, sec: v.swim.sec, dist: v.swim.dist },
+        t1: v.t1,
+        bike: { speed: v.bike.speed, dist: v.bike.dist },
+        t2: v.t2,
+        run: { min: v.run.min, sec: v.run.sec, dist: v.run.dist }
+      };
+      const list = loadCustom();
+      list.push(entry);
+      saveCustom(list);
+      activeId = id;
+      closeAdd();
+      renderTabs();
+      $('race-tag').textContent = name;
+    };
+
+    $('add-save').addEventListener('click', doSave);
+    $('add-name').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doSave();
+      if (e.key === 'Escape') closeAdd();
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ─── Inputs → recompute + reset active tag if edited ─
+  ['swim-min','swim-sec','swim-dist','t1','bike-speed','bike-dist','t2','run-min','run-sec','run-dist']
+    .forEach(id => $(id).addEventListener('input', () => {
+      compute();
+      // check if any preset still matches
+      const all = [...builtins, ...loadCustom()];
+      const match = all.find(p => presetMatchesInputs(p));
+      if (match) {
+        activeId = match.id;
+        $('race-tag').textContent = match.name;
+      } else {
+        activeId = null;
+        $('race-tag').textContent = 'Custom';
+      }
+      renderTabs();
+    }));
+
+  // ─── Init ────────────────────────────────────────────
+  const now = new Date();
+  $('date-tag').textContent = now.toISOString().slice(0, 10);
+
+  renderTabs();
+  compute();
+</script>
