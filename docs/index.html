@@ -1,4 +1,13 @@
-<!-- Triathlon Time Goal Calculator — Minimal edition -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Triathlon Time Goal</title>
+  <meta name="description" content="Set your race goals — a minimal triathlon finish time calculator.">
+  <meta property="og:title" content="Triathlon Time Goal">
+  <meta property="og:description" content="Set your race goals — a minimal triathlon finish time calculator.">
+  <meta property="og:type" content="website">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@300;400;500;600&display=swap');
 
@@ -242,6 +251,7 @@
   }
   @media (max-width: 900px) {
     .main { grid-template-columns: 1fr; gap: 40px; }
+    .result { position: static; }
   }
 
   /* ─── Legs ───────────────────────────────────────── */
@@ -491,11 +501,30 @@
     border-top: 1px solid var(--line);
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-family: var(--mono);
     font-size: 10px;
     color: var(--mute);
     letter-spacing: 0;
   }
+  .reset-btn {
+    background: transparent;
+    border: none;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--mute);
+    cursor: pointer;
+    padding: 0;
+    letter-spacing: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--line);
+    transition: color 0.15s, text-decoration-color 0.15s;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .reset-btn.visible { opacity: 1; pointer-events: auto; }
+  .reset-btn:hover { color: var(--ink); text-decoration-color: var(--ink); }
 
   /* Reveal */
   .fade { animation: fade 0.6s cubic-bezier(.22,1,.36,1) both; }
@@ -508,6 +537,8 @@
     to { opacity: 1; transform: translateY(0); }
   }
 </style>
+</head>
+<body>
 
 <div class="page">
 
@@ -515,7 +546,7 @@
   <header class="head fade">
     <div class="h-title"><span class="dot"></span>Triathlon Time Goal</div>
     <div class="h-meta">
-      <span>Half · 1.9 / 90 / 21.1 km</span>
+      <span>Swim · Bike · Run</span>
       <span id="date-tag"></span>
     </div>
   </header>
@@ -645,7 +676,7 @@
         <div class="leg-body">
           <div class="leg-head">
             <div class="leg-name">Run</div>
-            <div class="leg-sub">half-marathon off the bike</div>
+            <div class="leg-sub">off the bike</div>
           </div>
           <div class="fields">
             <div class="field">
@@ -675,7 +706,7 @@
     <aside class="result fade d4">
       <div class="result-label">
         <span>Projected finish</span>
-        <span class="race-tag" id="race-tag">Standard</span>
+        <span class="race-tag" id="race-tag"></span>
       </div>
 
       <div class="time-xl" id="time-display">
@@ -715,26 +746,15 @@
   </main>
 
   <footer class="foot">
-    <span>Triathlon Time Goal · Half</span>
-    <span>v1.0</span>
+    <span>Triathlon Time Goal</span>
+    <button type="button" id="reset-btn" class="reset-btn" title="Clear all saved courses">Clear saved courses</button>
   </footer>
 
 </div>
 
 <script>
-  // ─── Built-in presets ────────────────────────────────
-  const builtins = [
-    { id:'standard', name:'Standard', subtitle:'70.3 reference',
-      swim:{min:2,sec:15,dist:1.9}, t1:5, bike:{speed:37,dist:90}, t2:3, run:{min:5,sec:0,dist:21.1} },
-    { id:'nice', name:'Nice', subtitle:'climbing',
-      swim:{min:2,sec:0,dist:1.9}, t1:5, bike:{speed:30,dist:90}, t2:3, run:{min:5,sec:10,dist:21.1} },
-    { id:'cascais', name:'Cascais', subtitle:'rolling',
-      swim:{min:1,sec:55,dist:1.9}, t1:5, bike:{speed:37,dist:90}, t2:3, run:{min:4,sec:45,dist:21.1} },
-    { id:'sables', name:'Les Sables', subtitle:'flat',
-      swim:{min:1,sec:45,dist:1.9}, t1:5, bike:{speed:42,dist:90}, t2:3, run:{min:4,sec:40,dist:21.1} },
-    { id:'emilia', name:'Emilia-Romagna', subtitle:'flat',
-      swim:{min:1,sec:50,dist:1.9}, t1:5, bike:{speed:41,dist:90}, t2:3, run:{min:4,sec:45,dist:21.1} }
-  ];
+  // ─── Built-in presets (empty — users create their own) ────
+  const builtins = [];
 
   const STORAGE_KEY = 'tri_custom_courses_v1';
   const $ = (id) => document.getElementById(id);
@@ -860,7 +880,7 @@
   }
 
   // ─── Tabs rendering ──────────────────────────────────
-  let activeId = 'standard';
+  let activeId = null;
 
   function renderTabs() {
     const custom = loadCustom();
@@ -912,7 +932,7 @@
         const id = b.dataset.del;
         const list = loadCustom().filter(x => x.id !== id);
         saveCustom(list);
-        if (activeId === id) activeId = 'standard';
+        if (activeId === id) activeId = null;
         renderTabs();
       });
     });
@@ -960,11 +980,27 @@
       if (e.key === 'Enter') doSave();
       if (e.key === 'Escape') closeAdd();
     });
+
+    updateResetVisibility();
   }
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
+
+  // ─── Reset button ────────────────────────────────────
+  function updateResetVisibility() {
+    const hasSaved = loadCustom().length > 0;
+    $('reset-btn').classList.toggle('visible', hasSaved);
+  }
+  $('reset-btn').addEventListener('click', () => {
+    if (!confirm('Clear all saved courses? This cannot be undone.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    activeId = null;
+    $('race-tag').textContent = '';
+    renderTabs();
+    updateResetVisibility();
+  });
 
   // ─── Inputs → recompute + reset active tag if edited ─
   ['swim-min','swim-sec','swim-dist','t1','bike-speed','bike-dist','t2','run-min','run-sec','run-dist']
@@ -978,7 +1014,7 @@
         $('race-tag').textContent = match.name;
       } else {
         activeId = null;
-        $('race-tag').textContent = 'Custom';
+        $('race-tag').textContent = '';
       }
       renderTabs();
     }));
@@ -990,3 +1026,6 @@
   renderTabs();
   compute();
 </script>
+
+</body>
+</html>
