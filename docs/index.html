@@ -186,62 +186,6 @@
   .tab.active .del { color: var(--mute-2); }
   .tab.active .del:hover { background: rgba(255,255,255,0.1); color: var(--bg); }
 
-  .tab-add {
-    flex: 0 0 auto;
-    padding: 10px 18px;
-    background: transparent;
-    border: 1px dashed var(--mute-2);
-    font-family: var(--font);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--mute);
-    cursor: pointer;
-    transition: all 0.18s ease;
-    min-width: 120px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    align-items: flex-start;
-    margin-left: 12px;
-  }
-  .tab-add .tab-sub { font-family: var(--mono); font-size: 10px; }
-  .tab-add:hover { color: var(--ink); border-color: var(--ink); border-style: solid; }
-
-  /* Inline add form */
-  .add-form {
-    flex: 0 0 auto;
-    display: none;
-    align-items: stretch;
-    border: 1px solid var(--ink);
-    margin-left: 12px;
-  }
-  .add-form.open { display: flex; }
-  .add-form input {
-    border: none;
-    outline: none;
-    padding: 10px 14px;
-    font-family: var(--font);
-    font-size: 12px;
-    font-weight: 500;
-    background: transparent;
-    color: var(--ink);
-    min-width: 180px;
-  }
-  .add-form input::placeholder { color: var(--mute-2); }
-  .add-form button {
-    border: none;
-    background: var(--ink);
-    color: var(--bg);
-    font-family: var(--font);
-    font-size: 11px;
-    font-weight: 500;
-    padding: 0 14px;
-    cursor: pointer;
-    letter-spacing: 0.02em;
-  }
-  .add-form button.cancel { background: transparent; color: var(--mute); border-left: 1px solid var(--line); }
-  .add-form button.cancel:hover { color: var(--ink); }
-
   /* ─── Main grid ──────────────────────────────────── */
   .main {
     display: grid;
@@ -542,17 +486,25 @@
     border-color: var(--bg-inv);
   }
   .format-btn.active .format-dist { color: var(--mute-2); }
+  .formats-hint {
+    flex: 0 0 100%;
+    font-size: 11px;
+    color: var(--mute);
+    margin-top: 4px;
+    font-style: italic;
+    letter-spacing: 0;
+  }
 
-  /* ─── Save CTA ────────────────────────────────────── */
+  /* ─── Save CTA (primary) ──────────────────────────── */
   .save-cta {
-    margin-top: 48px;
-    padding: 22px 24px;
-    border: 1px solid var(--line);
-    background: transparent;
+    margin-top: 56px;
+    padding: 28px 32px;
+    border: 1px solid var(--bg-inv);
+    background: var(--bg-inv);
     font-family: var(--font);
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 500;
-    color: var(--ink);
+    color: var(--bg);
     cursor: pointer;
     width: 100%;
     text-align: left;
@@ -562,20 +514,30 @@
     transition: all 0.18s ease;
     letter-spacing: -0.01em;
   }
-  .save-cta:hover { border-color: var(--ink); }
-  .save-cta .arrow {
-    font-family: var(--mono);
-    font-size: 14px;
-    color: var(--mute);
-    transition: color 0.18s;
+  .save-cta:hover {
+    background: var(--ink);
+    transform: translateY(-1px);
   }
-  .save-cta:hover .arrow { color: var(--ink); }
+  .save-cta .cta-label { display: flex; align-items: baseline; gap: 14px; }
+  .save-cta .cta-hint {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--mute-2);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .save-cta .arrow {
+    font-size: 20px;
+    color: var(--bg);
+    transition: transform 0.18s;
+  }
+  .save-cta:hover .arrow { transform: translateX(4px); }
   .save-cta.hidden { display: none; }
 
   .save-form {
-    margin-top: 48px;
+    margin-top: 56px;
     display: none;
-    border: 1px solid var(--ink);
+    border: 1px solid var(--bg-inv);
     background: transparent;
   }
   .save-form.open { display: flex; align-items: stretch; }
@@ -842,8 +804,8 @@
           <div class="s-value" id="total-dist">113.0<span class="s-unit">km</span></div>
         </div>
         <div class="stat">
-          <div class="s-label">Average pace</div>
-          <div class="s-value" id="avg-pace">2:38<span class="s-unit">min/km</span></div>
+          <div class="s-label">Transition total</div>
+          <div class="s-value" id="transition-total">00:08<span class="s-unit">min</span></div>
         </div>
         <div class="stat">
           <div class="s-label">Bike share</div>
@@ -868,7 +830,10 @@
 
   <!-- Save this goal (end-of-flow CTA) -->
   <button type="button" class="save-cta" id="save-cta">
-    <span>Save this goal</span>
+    <span class="cta-label">
+      <span>Save this goal</span>
+      <span class="cta-hint">keep your projection</span>
+    </span>
     <span class="arrow">→</span>
   </button>
   <div class="save-form" id="save-form">
@@ -972,7 +937,7 @@
 
     const totalDist = v.swim.dist + v.bike.dist + v.run.dist;
     $('total-dist').innerHTML = `${totalDist.toFixed(1)}<span class="s-unit">km</span>`;
-    $('avg-pace').innerHTML = `${fmtMMSS(total/totalDist)}<span class="s-unit">min/km</span>`;
+    $('transition-total').innerHTML = `${fmtMMSS(v.t1 + v.t2)}<span class="s-unit">min</span>`;
     $('bike-share').innerHTML = `${(bikeMin/total*100).toFixed(0)}<span class="s-unit">%</span>`;
     $('total-min').innerHTML = `${Math.round(total)}<span class="s-unit">min</span>`;
 
@@ -1019,7 +984,14 @@
     const all = [...builtins, ...custom];
     const el = $('tabs');
 
-    const anyActive = all.some(p => p.id === activeId && presetMatchesInputs(p));
+    // Hide the whole tabs row when nothing is saved
+    if (all.length === 0) {
+      el.innerHTML = '';
+      el.style.display = 'none';
+      updateResetVisibility();
+      return;
+    }
+    el.style.display = '';
 
     el.innerHTML = all.map(p => {
       const isCustom = !builtins.find(b => b.id === p.id);
@@ -1031,19 +1003,9 @@
           ${isCustom ? `<button class="del" data-del="${p.id}" title="Remove">×</button>` : ''}
         </button>
       `;
-    }).join('') + `
-      <button class="tab-add" id="add-btn">
-        <span>+ Add course</span>
-        <span class="tab-sub">save current</span>
-      </button>
-      <div class="add-form" id="add-form">
-        <input type="text" id="add-name" placeholder="Course name…" maxlength="40">
-        <button type="button" id="add-save">Save</button>
-        <button type="button" class="cancel" id="add-cancel">Cancel</button>
-      </div>
-    `;
+    }).join('');
 
-    // Wire up
+    // Wire tab selection
     el.querySelectorAll('.tab').forEach(btn => {
       btn.addEventListener('click', (e) => {
         if (e.target.classList.contains('del')) return;
@@ -1059,6 +1021,7 @@
       });
     });
 
+    // Wire delete buttons
     el.querySelectorAll('[data-del]').forEach(b => {
       b.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1068,33 +1031,6 @@
         if (activeId === id) activeId = null;
         renderTabs();
       });
-    });
-
-    $('add-btn').addEventListener('click', () => {
-      $('add-btn').style.display = 'none';
-      $('add-form').classList.add('open');
-      setTimeout(() => $('add-name').focus(), 30);
-    });
-
-    const closeAdd = () => {
-      $('add-btn').style.display = '';
-      $('add-form').classList.remove('open');
-      $('add-name').value = '';
-    };
-
-    $('add-cancel').addEventListener('click', closeAdd);
-
-    const doSave = () => {
-      const name = $('add-name').value.trim();
-      if (!name) { $('add-name').focus(); return; }
-      saveAsCourse(name);
-      closeAdd();
-    };
-
-    $('add-save').addEventListener('click', doSave);
-    $('add-name').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') doSave();
-      if (e.key === 'Escape') closeAdd();
     });
 
     updateResetVisibility();
@@ -1129,11 +1065,11 @@
 
   // ─── Triathlon formats (distances only) ──────────────
   const formats = [
-    { id:'xxs',     name:'XXS',     sub:'Super Sprint', swim:0.4, bike:10,  run:2.5 },
-    { id:'s',       name:'S',       sub:'Sprint',       swim:0.75, bike:20, run:5 },
-    { id:'m',       name:'M',       sub:'Olympic',      swim:1.5,  bike:40, run:10 },
-    { id:'half',    name:'Half',    sub:'Ironman 70.3', swim:1.9,  bike:90, run:21.1 },
-    { id:'ironman', name:'Ironman', sub:'Full 140.6',   swim:3.8,  bike:180,run:42.2 }
+    { id:'xs',      name:'XS',      sub:'Super Sprint', swim:0.4,  bike:10,  run:2.5 },
+    { id:'s',       name:'S',       sub:'Sprint',       swim:0.75, bike:20,  run:5 },
+    { id:'m',       name:'M',       sub:'Olympic',      swim:1.5,  bike:40,  run:10 },
+    { id:'half',    name:'Half',    sub:'Ironman 70.3', swim:1.9,  bike:90,  run:21.1 },
+    { id:'ironman', name:'Ironman', sub:'Full 140.6',   swim:3.8,  bike:180, run:42.2 }
   ];
 
   function formatMatches(f) {
@@ -1153,7 +1089,8 @@
             <span class="format-dist">${f.swim} / ${f.bike} / ${f.run} km</span>
           </button>
         `;
-      }).join('');
+      }).join('') +
+      `<div class="formats-hint">All distances remain editable below — adjust for non-standard courses.</div>`;
     el.querySelectorAll('.format-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const f = formats.find(x => x.id === btn.dataset.fid);
